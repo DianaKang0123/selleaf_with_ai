@@ -24,7 +24,7 @@ SECRET_KEY = 'django-insecure-xrbh@fs#!56dnm^+1ld6l5n5t7n)1d@6t(@r3a&2!_x1j8r*$r
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['3.36.78.185' ,'127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['3.36.78.185', '127.0.0.1', 'localhost', 'selleaf.shop']
 
 # Application definition
 
@@ -63,7 +63,7 @@ INSTALLED_APPS = [
     'rest_framework'
 ]
 
-SITE_ID = 4
+SITE_ID = 10
 
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_LOGOUT_ON_GET = True
