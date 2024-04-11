@@ -536,7 +536,6 @@ class LectureDetailOfflineView(View):
         }
 
         apply = Apply.objects.create(**data)
-        member_mileage = OrderMileage.objects.create()
         # 같이 듣는 사람 넣기
         name_inputs = request.POST.getlist('name_input')
         for name_input in name_inputs:
