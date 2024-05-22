@@ -39,4 +39,5 @@ urlpatterns = [
     path('mypage/teachers/apply/<int:apply_id>',MypageTraineeView.as_view()),
     path('mypage/teachers/show/apply/<int:apply_id>', MypageTraineeAPI.as_view())
 
+
 ]

@@ -12,7 +12,7 @@ const showNotices = (notices) => {
         text += `
             <li class="list-inner-box">
               <h3 class="list-inner">
-                <button class="list-q">
+                <button class="list-q notice">
                   <span class="question-text">${notice.notice_title}</span>
                   <span class="question-v"></span>
                 </button>

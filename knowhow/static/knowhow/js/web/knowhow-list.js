@@ -28,14 +28,14 @@ sortChoices.forEach((sort) => {
             sorting = '인기순'
         }else if(sort.innerText === "스크랩순"){
             sorting = '스크랩순'
-        }else if(sort.innerText === "식물 키우기") {
-            type = '식물 키우기'
-        }else if(sort.innerText === "관련 제품") {
-            type = '관련 제품'
-        }else if(sort.innerText === "테라리움") {
-            type = '테라리움'
-        }else if(sort.innerText === "스타일링") {
-            type = '스타일링'
+        }else if(sort.innerText === "꽃") {
+            type = '꽃'
+        }else if(sort.innerText === "농촌") {
+            type = '농촌'
+        }else if(sort.innerText === "원예") {
+            type = '원예'
+        }else if(sort.innerText === "정원") {
+            type = '정원'
         }
         // console.log(type)
 

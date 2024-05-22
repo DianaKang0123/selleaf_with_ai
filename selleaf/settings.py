@@ -22,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-xrbh@fs#!56dnm^+1ld6l5n5t7n)1d@6t(@r3a&2!_x1j8r*$r'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['3.36.78.185', '127.0.0.1', 'localhost', 'selleaf.shop']
 
@@ -30,6 +30,7 @@ ALLOWED_HOSTS = ['3.36.78.185', '127.0.0.1', 'localhost', 'selleaf.shop']
 
 INSTALLED_APPS = [
     'django.contrib.humanize',
+    'ai',
     'main',
     'apply',
     'alarm',

@@ -33,7 +33,7 @@ const backmodal = document.querySelector("#admin-message-modal-backdrop");
 const canclebutton = document.querySelector(".admin-message-modal-left-button");
 
 const adminId = "selleaf";
-const adminPw = "1234"
+const adminPw = "1234";
 
 // 로그인 버튼 - click 이벤트
 button.addEventListener("click", (e) => {

@@ -1,5 +1,8 @@
+import os
 from operator import itemgetter
+from pathlib import Path
 
+import joblib
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 # noinspection PyInterpreter
@@ -20,7 +23,6 @@ from member.models import Member, MemberAddress, MemberProfile
 from member.serializers import MemberSerializer
 from order.models import OrderMileage
 from post.models import Post, PostFile, PostPlant, PostReply, PostReplyLike, PostLike
-from selleaf.models import Mileage
 from teacher.models import Teacher
 from trade.models import TradeScrap, TradeFile, TradePlant, Trade
 
@@ -28,43 +30,77 @@ from trade.models import TradeScrap, TradeFile, TradePlant, Trade
 class MemberJoinView(View):
     def get(self, request):
         member = request.GET
+        # 회원가입시 get방식을 통해 로그인 화면으로 부터 데이터를 받는다
         context = {
-            'memberEmail': member['member_email'],
-            'memberName': member['member_name'],
-            'memberProfile': member['member_profile'],
-            'memberType': member['member_type'],
+            'memberEmail': member.get('member_email'),
+            'memberName': member.get('member_name'),
+            'memberProfile': member.get('member_profile'),
+            'memberType': member.get('member_type'),
         }
         return render(request, 'member/join/join.html', context)
 
     def post(self, request):
+        # 회원가입시 받은 데이터들을 처리하는 로직
         post_data = request.POST
         marketing_agree = post_data.getlist('marketing-agree')
+        # 자바스크립트에서 false, true로 전달 되기 때문에 False, True로 전환하는 로직
         marketing_agree = True if marketing_agree else False
         sms_agree = post_data.getlist('sms-agree')
         sms_agree = True if sms_agree else False
 
         member_data = {
-            'member_email': post_data['member-email'],
-            'member_name': post_data['member-name'],
-            'member_type': post_data['member-type'],
+            'member_email': post_data.get('member-email'),
+            'member_name': post_data.get('member-name'),
+            'member_type': post_data.get('member-type'),
             'marketing_agree': marketing_agree,
-            'sms_agree': sms_agree
+            'sms_agree': sms_agree,
+            # 'member_knowhow_ai_model': 'base'
         }
+        # member_data로 사용자의 정보 찾기
+        # filter에 kwargs로 dict를 전달한다.
         is_member = Member.objects.filter(**member_data)
 
+        # 사용자의 정보가 없으면 생성한다
+        # exists는 데이터의 존재여부를 반환한다.
         if not is_member.exists():
             member = Member.objects.create(**member_data)
 
+            # 각 회원별 ai model 생성
+            # 사전훈련된 pkl파일 불러오기
+            # 용량의 문제로 잘 나오는것만 확인하고 주석처리
+            # knowhow_ai_models = {}
+            # knowhow_ai_models[f'knowhow_ai{member.id}'] = joblib.load(os.path.join(Path(__file__).resolve().parent, '../main/ai/knowhow_ai.pkl'))
+            #
+            # joblib.dump(knowhow_ai_models[f'knowhow_ai{member.id}'], f'../main/ai/knowhow_ai{member.id}.pkl')
+            #
+            # # 저장할 파일의 경로를 지정
+            # file_path = os.path.join(Path(__file__).resolve().parent, f'../main/ai/knowhow_ai{member.id}.pkl')
+            # directory = os.path.dirname(file_path)
+            #
+            # # 디렉토리가 존재하지 않으면 생성
+            # if not os.path.exists(directory):
+            #     os.makedirs(directory)
+            #
+            # # 모델을 지정된 경로에 저장
+            # joblib.dump(knowhow_ai_models[f'knowhow_ai{member.id}'], file_path)
+            #
+            # # member 테이블의 member_knowhow_ad_model 컬럼에 경로 저장
+            # member_model = Member.objects.get(id=member.id)
+            # member_model.member_knowhow_ai_model = f'main/ai/knowhow_ai{member.id}.pkl'
+            # member_model.save(update_fields=['member_knowhow_ai_model'])
+
+            # 사용자의 프로필 파일과 주소는 다른 테이블에서 관리 하기 때문에
+            # 별도로 저장
             profile_data = {
-                'file_url': post_data['member-profile'],
+                'file_url': post_data.get('member-profile'),
                 'member': member
             }
             MemberProfile.objects.create(**profile_data)
 
             address_data = {
-                'address_city': post_data['address-city'],
-                'address_district': post_data['address-district'],
-                'address_detail': post_data['address-detail'],
+                'address_city': post_data.get('address-city'),
+                'address_district': post_data.get('address-district'),
+                'address_detail': post_data.get('address-detail'),
                 'member': member
             }
             MemberAddress.objects.create(**address_data)
@@ -78,11 +114,13 @@ class MemberJoinView(View):
 
 
 class MemberLoginView(View):
+    # 로그인 페이지로 이동 로직
     def get(self, request):
         return render(request, 'member/login/login.html')
 
 
 class MemberLogoutView(View):
+    # 로그아웃시 세션에 사용자의 정보를 포함한 모든 정보 제거
     def get(self, request):
         request.session.clear()
         return redirect('member:login')
@@ -91,166 +129,174 @@ class MemberLogoutView(View):
 # =====================================================================================================================
 class MypageUpdateView(View):
     def get(self, request):
-        # 세션에서 멤버 ID 가져오기
         member_id = request.session['member']['id']
-
-        # 해당 멤버 ID를 사용하여 멤버 객체 가져오고 시리얼화
-        member_data = MemberSerializer(Member.objects.get(id=member_id)).data
-
-        # 'check' 매개변수 가져오기
+        request.session['member'] = MemberSerializer(Member.objects.get(id=member_id)).data
         check = request.GET.get('check')
-
-        # 해당 멤버 ID를 사용하여 해당하는 선생님(teacher) 객체 필터링
         teacher = Teacher.objects.filter(member_id=member_id)
-
-        # 데이터베이스에서 멤버 프로필 파일 가져오기
-        member_profile = MemberProfile.objects.filter(id=member_id).first()
-
-        # 세션에서 멤버 프로필 파일 URL 가져오기
+        member_files = MemberProfile.objects.filter(id = member_id).first()
         session_file = request.session['member_files'][0]['file_url']
-
-        # 데이터베이스에 저장된 멤버 프로필 파일 URL 가져오기
-        member_file = member_profile.file_url if member_profile else None  # 단일 객체 가져오도록
-
-        # 컨텍스트 설정
+        member_file = member_files.file_url
         context = {
-            'check': check,  # 체크 변수 추가
-            'member_file': member_file,  # 멤버 프로필 파일 URL 추가
-            'memberProfile': session_file,  # 세션에서 가져온 프로필 파일 URL 추가
-            'teacher': teacher  # 선생님(teacher) 객체 추가
+            'check': check,
+            'member_file': member_file,
+            'memberProfile': session_file,
+            'teacher':teacher
         }
-
-        # 템플릿 렌더링 및 컨텍스트 전달
         return render(request, 'member/mypage/my_settings/user-info-update.html', context)
 
     def post(self, request):
-        # POST 요청에서 데이터 및 파일 가져오기
         data = request.POST
-        files = request.FILES.getlist('new-image')  # 'new-image' 필드에서 파일 가져오기
-        member_id = request.session['member']['id']  # 세션에서 멤버 ID 가져오기
-
-        # 세션에서 가져온 멤버 ID를 사용하여 해당하는 멤버 객체 가져오기
+        files = request.FILES.getlist('new-image')
+        member_id = request.session['member']['id']
         member = Member.objects.get(id=member_id)
-
-        # 사용자 이름 업데이트 및 업데이트된 날짜 설정
         member.member_name = data['member-name']
         member.updated_date = timezone.now()
-        member.save(update_fields=['member_name', 'updated_date'])  # 변경사항 저장
+        member.save(update_fields=['member_name', 'updated_date'])
 
-        # 파일이 제출되었다면
         if files:
-            # 각 파일에 대해 반복하여 처리
             for file in files:
-                # 해당하는 멤버에 대한 프로필 생성 또는 가져오기
                 member_profile, created = MemberProfile.objects.get_or_create(member=member)
-
-                # 프로필 파일 URL 및 업데이트된 날짜 설정
                 member_profile.file_url = file
                 member_profile.updated_date = timezone.now()
-                member_profile.save()  # 변경사항 저장
-
-        # 세션에 새로운 프로필 이미지 URL 저장
+                member_profile.save()
         request.session['member_files'] = list(member.memberprofile_set.values('file_url'))
 
-        # 사용자 정보 업데이트 페이지로 리디렉션
         return redirect("member:update")
 
 
 # =====================================================================================================================
 # 내 활동 모두보기 view
-# 마이페이지 보기
-def get_member_info(request):
-    member = request.session['member']
-    member_file = request.session['member_files']
-    teacher = Teacher.objects.filter(member_id=member['id'])
-    return member, member_file, teacher
-
-
-def calculate_counts(member_id):
-    post_like_count = PostLike.objects.filter(member_id=member_id, status=1).count()
-    knowhow_like_count = KnowhowLike.objects.filter(member_id=member_id, status=1).count()
-    like_count = post_like_count + knowhow_like_count
-
-    lecture_scrap_count = LectureScrap.objects.filter(member_id=member_id, status=1).count()
-    trade_scrap_count = TradeScrap.objects.filter(member_id=member_id, status=1).count()
-    scrap_count = lecture_scrap_count + trade_scrap_count
-
-    return like_count, scrap_count
-
-def calculate_mileage(member_id):
-    mileages = OrderMileage.objects.filter(member_id=member_id).values('mileage', 'mileage_status')
-    total = 0
-    for mileage in mileages:
-        if mileage['mileage_status'] == 1:
-            total += mileage['mileage']
-        elif mileage['mileage_status'] == 0:
-            total -= mileage['mileage']
-    return total
 
 class MypageShowView(View):
-    def get(self, request):
+    def get(self,request):
+        member = request.session['member']
+        member_file = request.session['member_files']
+        teacher = Teacher.objects.filter(member_id=member['id'])
 
-        member, member_file, teacher = get_member_info(request)
         post = list(Post.objects.filter(member_id=member['id']))
         knowhow = list(Knowhow.objects.filter(member_id=member['id']))
         post_count = len(post) + len(knowhow)
+
         lecture_review = LectureReview.objects.filter(member_id=member['id'])
-        like_count, scrap_count = calculate_counts(member['id'])
-        total = calculate_mileage(member['id'])
+
+        post_like = list(PostLike.objects.filter(member_id=member['id'], status=1))
+        knowhowlike = KnowhowLike.objects.filter(member_id=member['id'], status=1)
+        like_count = len(post_like) + len(knowhowlike)
+
+        lecture_scrap = LectureScrap.objects.filter(member_id=member['id'], status=1)
+        trade_scrap = TradeScrap.objects.filter(member_id=member['id'], status=1)
+        scrap_count = len(lecture_scrap) + len(trade_scrap)
+
+        mileages = OrderMileage.objects.filter(member_id=member['id']).values('mileage','mileage_status')
+
+        total = 0
+        for mileage in mileages:
+            if mileage['mileage_status'] == 1:
+                total += mileage['mileage']
+            elif mileage['mileage_status'] == 0:
+                total -= mileage['mileage']
+
+
         context = {
             'member': member,
             'memberProfile': member_file[0]['file_url'],
             'post': post,
             'teacher': teacher,
             'post_count': post_count,
-            'lecture_review': lecture_review,
-            'like_count': like_count,
-            'scrap_count': scrap_count,
+            'lecture_review':lecture_review,
+            'like_count':like_count,
+            'scrap_count':scrap_count,
             'mileage': total
         }
-        return render(request, 'member/mypage/my_profile/see-all.html', context)
 
 
+
+        return render(request,'member/mypage/my_profile/see-all.html',context)
+
+# 내 활동 내 게시글 view
 class MypagePostView(View):
-    def get(self, request):
-        member, member_file, teacher = get_member_info(request)
+    def get(self,request):
+
+        member = request.session['member']
+        member_file = request.session['member_files']
+
+        teacher = Teacher.objects.filter(member_id=member['id'])
+
         post = list(Post.objects.filter(member_id=member['id']))
         knowhow = list(Knowhow.objects.filter(member_id=member['id']))
         post_count = len(post) + len(knowhow)
-        like_count, scrap_count = calculate_counts(member['id'])
-        total = calculate_mileage(member['id'])
+        print(knowhow)
+        post_like = list(PostLike.objects.filter(member_id=member['id'], status=1))
+        knowhowlike = KnowhowLike.objects.filter(member_id=member['id'], status=1)
+        like_count = len(post_like) + len(knowhowlike)
+
+        lecture_scrap = LectureScrap.objects.filter(member_id=member['id'], status=1)
+        trade_scrap = TradeScrap.objects.filter(member_id=member['id'], status=1)
+        scrap_count = len(lecture_scrap) + len(trade_scrap)
+
+        mileages = OrderMileage.objects.filter(member_id=member['id']).values('mileage', 'mileage_status')
+
+        total = 0
+        for mileage in mileages:
+            if mileage['mileage_status'] == 1:
+                total += mileage['mileage']
+            elif mileage['mileage_status'] == 0:
+                total -= mileage['mileage']
+
         context = {
             'member': member,
             'memberProfile': member_file[0]['file_url'],
             'post': post,
             'teacher': teacher,
             'post_count': post_count,
-            'like_count': like_count,
-            'scrap_count': scrap_count,
+            'like_count':like_count,
+            'scrap_count':scrap_count,
             'mileage': total
         }
-        return render(request, 'member/mypage/my_profile/my-posts.html', context)
+        return render(request,'member/mypage/my_profile/my-posts.html',context)
 
 
+# 내 활동 내 댓글 view
 class MypageReplyView(View):
-    def get(self, request):
-        member, member_file, teacher = get_member_info(request)
-        post_reply_count = PostReply.objects.filter(member_id=member['id']).count()
-        knowhow_reply_count = KnowhowReply.objects.filter(member_id=member['id']).count()
-        reply_count = post_reply_count + knowhow_reply_count
-        like_count, scrap_count = calculate_counts(member['id'])
-        total = calculate_mileage(member['id'])
+    def get(self,request):
+
+        member = request.session['member']
+        member_file = request.session['member_files']
+
+        teacher = Teacher.objects.filter(member_id=member['id'])
+
+        post_reply = list(PostReply.objects.filter(member_id=member['id']))
+        knowhow_reply = list(KnowhowReply.objects.filter(member_id=member['id']))
+        reply_count = len(post_reply)+len(knowhow_reply)
+
+        post_like = list(PostLike.objects.filter(member_id=member['id'], status=1))
+        knowhowlike = KnowhowLike.objects.filter(member_id=member['id'], status=1)
+        like_count = len(post_like) + len(knowhowlike)
+
+        lecture_scrap = LectureScrap.objects.filter(member_id=member['id'], status=1)
+        trade_scrap = TradeScrap.objects.filter(member_id=member['id'], status=1)
+        scrap_count = len(lecture_scrap) + len(trade_scrap)
+
+        mileages = OrderMileage.objects.filter(member_id=member['id']).values('mileage','mileage_status')
+
+        total = 0
+        for mileage in mileages:
+            if mileage['mileage_status'] == 1:
+                total += mileage['mileage']
+            elif mileage['mileage_status'] == 0:
+                total -= mileage['mileage']
+
+
         context = {
             'member': member,
             'memberProfile': member_file[0]['file_url'],
-            'teacher': teacher,
-            'like_count': like_count,
-            'reply_count': reply_count,
-            'scrap_count': scrap_count,
-            'mileage': total
+            'teacher':teacher,
+            'like_count':like_count,
+            'reply_count':reply_count,
+            'scrap_count':scrap_count,
+            'mileage':total
         }
-        return render(request, 'member/mypage/my_profile/my-comments.html', context)
-
+        return render(request,'member/mypage/my_profile/my-comments.html',context)
 
 # 내 활동 내 리뷰 view
 class MypageReviewView(View):
@@ -1167,4 +1213,3 @@ class MypageTraineeAPI(APIView):
         apply['trainees'] = trainee_names
 
         return Response(apply)
-

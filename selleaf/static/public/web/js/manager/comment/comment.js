@@ -233,8 +233,8 @@ modalConfirm.addEventListener("click", async () => {
     let replyInfo = {} // 삭제할 댓글 각각의 정보를 담을 빈 객체
     let replyList = []  // 삭제할 댓글 목록을 담을 빈 배열
 
-    // 만약 모달창 내 삭제 버튼 클릭 시점에서 댓글 목록에 뭐라도 있다면
-    if (Object.keys(replyList).length !== 0){
+    // 만약 모달창 내 삭제 버튼 클릭 시점에서 댓글 목록에 뭐가 없다면
+    if (Object.keys(replyList).length === 0){
         // 각각의 체크박스에 대해서 아래 코드를 실행
         checkedTargets.forEach((checkedTarget, i) => {
             // 먼저 체크박스에서 가장 가까이 있는 'list-content' 클래스를 가진 상위 태그를 가져옴
@@ -252,7 +252,7 @@ modalConfirm.addEventListener("click", async () => {
                 target_type: typeName.innerText
             };
             // 댓글 정보를 잘 가져왔는지 검사
-            // console.log(replyInfo)
+            console.log(replyInfo)
 
             // 삭제할 댓글 리스트에 완성된 객체 데이터 추가
             replyList.push(replyInfo);
