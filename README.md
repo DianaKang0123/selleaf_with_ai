@@ -131,7 +131,7 @@
 
 <br>
 
-3. 사전 훈련 데이터에서 제목과 내용 피처를 가져와 concatenate 함수를 통하여 결합
+3. 사전 훈련 데이터에서 제목과 내용 피처를 가져와 concatenate 함수를 통하여 하나의 문장으로 결합
     <details>
     <summary>코드</summary>
 
@@ -243,7 +243,8 @@
 2. ai 추천태그 checkbox클릭시 post-module.js이 aiPost를 통하여 해당 정보 post 방식으로 view로 전달
     > 클릭 후 
     > 
-    > ![image-2](https://github.com/DianaKang0123/selleaf/assets/156397873/86eb330c-fa1e-481b-a745-fea1245be90e)
+    > <img src='https://github.com/DianaKang0123/selleaf/assets/156397873/9993d1ab-4e82-4cf3-8cea-fa5bba932ad4'> <img src='https://blog.kakaocdn.net/dn/b9jflW/btq6mHPadGm/L01EqsmmKj08ek5ThUZh2K/img.gif' width="20" height='25' />
+
 
 
 3. view에서 위에 실행한 코사인 유사도 분석 후 결과를 return
@@ -273,5 +274,6 @@
 
 > #### 🚩 추천 태그
 > 
-> ![image-5](https://github.com/DianaKang0123/selleaf/assets/156397873/005172fa-87b8-44db-8e22-5fa16a855fdd)
+> ![image-5](https://github.com/DianaKang0123/selleaf/assets/156397873/864b0e9b-77f9-4659-b926-5b37aaeacff8)
      
+
