@@ -155,6 +155,9 @@
 
 <br>    
 
+> <img width="500" alt="스크린샷 2024-05-24 101204" src="https://github.com/DianaKang0123/selleaf_with_ai/assets/156397873/2755a26f-9a37-4265-b26d-b1ca086840ae">
+
+
 4. TF-IDF vectorizer를 통해서 사전 훈련 데이터를 벡터화하여 단어의 빈도 수 계산
     <details>
     <summary>코드</summary>
@@ -166,6 +169,9 @@
     ```
 
     </details>
+
+> <img width="200" alt="스크린샷 2024-05-24 101204" src="https://github.com/DianaKang0123/selleaf_with_ai/assets/156397873/fb8a63ed-8d5f-4fc8-83e4-5af45922a914">
+
 
 <br>    
 
@@ -187,6 +193,9 @@
     </details>
 
 <br>    
+
+> <img width="500" alt="스크린샷 2024-05-24 101333" src="https://github.com/DianaKang0123/selleaf_with_ai/assets/156397873/0c32b5e2-3400-4704-9bf5-3b3dba262633">
+
 
 6. 분석한 유사도를 바탕으로 유사도 높은 순으로 정렬한 후 반복문을 통해서 5개의 포스트의 인덱스로 태그를 가져와 중복방지를 위하여 set에 담아준 후 list로 변환하여 화면에 fetch 로 전달
 
@@ -220,7 +229,9 @@
     ```
     </details>
 
+    
 <br>
+> <img width="500" alt="스크린샷 2024-05-24 101445" src="https://github.com/DianaKang0123/selleaf_with_ai/assets/156397873/bcfa459a-8950-403f-bfcb-eceee07116e4">
 
 ---
 <br>
