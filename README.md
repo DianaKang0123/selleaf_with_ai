@@ -1,4 +1,3 @@
-![image](https://github.com/DianaKang0123/selleaf_with_ai/assets/156397873/dd605b73-028a-4499-8f2b-e253d34065bf)<br>
 <br>
 <br>
 
@@ -25,6 +24,9 @@
 3. 코사인 유사도 계산
 4. 추천 알고리즘의 흐름
 5. 결과
+6. 트러블 슈팅
+7. 기대 효과
+8. 개선점
 
 <br>
 
@@ -275,8 +277,78 @@
 > #### 🚩 추천 태그
 > 
 > ![image-5](https://github.com/DianaKang0123/selleaf/assets/156397873/864b0e9b-77f9-4659-b926-5b37aaeacff8)
-     
-### **6️⃣ 기대 효과**
+
+### **6️⃣ 트러블 슈팅**
+- 문제점 1. 코사인 유사도 분석 후 값을 리턴할 때 for문을 사용하여 각 태그를 분리하는 과정에서 string 타입이 한글자씩 분리되는 문제
+
+- 기존 반환되는 값의 유형 : ["['제주'", " '나무'", " '환경']"]
+
+- 해결 : 리스트의 []와 '' 문자를 삭제하고 띄어쓰기 단위로 재분할하여 각 단어를 추출
+- 반환 되는 값의 유형 : ["제주", "나무", "환경"]
+
+    <details>
+        <summary>코드</summary>
+    
+        ```
+        joined_str = ''.join(tags)
+                cleaned_str = joined_str.replace("[", "").replace("]", "").replace("'", "").strip()
+                cleaned_str = cleaned_str.split(" ")
+                tag_set.update(cleaned_str)
+        ```
+    </details>
+
+- 문제점 2. 버튼을 클릭하여 서비스 활성화 시 결과물을 나타내기까지의 시간이 오래걸림
+
+- 해결 : 로딩 처리를 하여 서버가 정상 작동하고 있음을 나타내고, 불필요한 함수를 삭제하여 속도를 개선시킴
+
+    <details>
+            <summary>코드 처리 전</summary>
+        
+            ```
+           const aiPost = async (postTitle, postContent) => {
+                const response = await fetch('/ai/api/post-detail/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json;charset=utf-8',
+                        'X-CSRFToken': csrf_token
+                    },
+                    body: JSON.stringify({ title: postTitle, content: postContent })
+                });
+                return await response.json();
+            };
+            ```
+    </details>
+
+    <details>
+        <summary>코드 처리 후</summary>
+    
+        ```
+       const aiPost = async (postTitle, postContent) => {
+            const loading = document.querySelector('.loading')
+            const info = document.querySelector('.tag-input2')
+            loading.style.display = 'block'
+            info.style.display = 'none'
+            const response = await fetch('/ai/api/post-detail/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json;charset=utf-8',
+                    'X-CSRFToken': csrf_token
+                },
+                body: JSON.stringify({ title: postTitle, content: postContent })
+            });
+            loading.style.display = 'none'
+            info.style.display = 'inline-block'
+            return await response.json();
+        };
+        ```
+    </details>     
+
+- 문제점 3. 배포 서버에서 새로 추가된 서비스에 대한 css가 깨지는 현상 발생
+
+- 해결 : collect static 명령어에서 css 파일을 가져올 떄 문제가 발생된것으로 파악되어, 해당 css 파일을 삭제한 후 다시 collectstatic 진행 후 해결
+
+
+### **7️⃣ 기대 효과**
 1. SEO(검색 엔진 최적화) 및 검색 가시성 향상
 
 - 태그의 수동 작성에서 발생할 수 있는 오류나 누락을 방지
@@ -296,3 +368,11 @@
 
 - 태그를 통하여 데이터를 관리하고 분석하는데 도움을 주고, 여기서 파생되는 인사이트로 사이트의 질을 향상시킴
 
+
+### **8️⃣ 개선점**
+
+- 사전 훈련 데이터의 양이 부족하여 코사인 유사도가 대체적으로 낮게 나오는 경향이 있음
+    - 이는 작성되는 게시글이 늘어날 수록 데이터가 쌓이고, 이로 인해 개선 될 수 있다고 판단됨
+- 서비스가 복잡해지면서 코드도 덩달아 복잡해지고, 데이터가 많아져 서버의 속도가 느려지는 것을 확인
+    - 이는 코드를 단순화하고 이미지 최적화등으로 개선해 나가야 할 것으로 판단됨
+ 
