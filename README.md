@@ -231,7 +231,8 @@
 
     
 <br>
-> <img width="500" alt="스크린샷 2024-05-24 101445" src="https://github.com/DianaKang0123/selleaf_with_ai/assets/156397873/bcfa459a-8950-403f-bfcb-eceee07116e4">
+
+> <img width="500" alt="스크린샷 2024-05-24 101445" src="https://github.com/DianaKang0123/selleaf_with_ai/assets/156397873/6a478238-69a4-4c1e-a90a-46c613cbc4e8">
 
 ---
 <br>
