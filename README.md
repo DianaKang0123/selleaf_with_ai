@@ -53,11 +53,168 @@
 #### 학습 데이터를 모으고 사용하는 과정은 다음과 같습니다.   
 
 - 크롤링을 통하여 홈페이지 성격에 맞는 식물에 관련 된 글의 제목, 내용, 태그를 크롤링하여 사용
-- 학습 데이터는 csv로 추출하여 ai_post 테이블에 정보를 담아 사용
+- selenium 라이브러리를 통한 동적 크롤링 진행
+- 무한 스크롤 리스트에서 100개씩 6개의 파일로 나누어 저장
+
+    <details>
+        <summary> 리스트 화면에서 상세게시물로 접속, 정보를 크롤링 하는 함수 </summary>
+    
+        ```
+            def get_articles_list(url, max_articles=100, max_files=6):
+                try:
+                    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+                    driver.get(url)
+            
+                    # 무한 스크롤 처리
+                    last_height = driver.execute_script("return document.body.scrollHeight")
+                    article_list = []
+                    post_links = set()  # 중복 링크 방지를 위해 set 사용
+            
+                    while True:
+                        html = driver.page_source
+                        soup = BeautifulSoup(html, 'html.parser')
+                        # 각 포스트 상세페이지의 링크 태그
+                        new_links = soup.select('.link_post')
+                        # 태그에서 href를 가져와 해당 링크로 접속
+                        new_links_set = set(link['href'] for link in new_links)
+            
+                        # 새로운 링크를 추가하고 이미 있는 링크는 제외
+                        post_links.update(new_links_set)
+            
+                        # 스크롤 다운
+                        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                        time.sleep(2)  # 페이지 로딩을 위한 대기 시간
+            
+                        new_height = driver.execute_script("return document.body.scrollHeight")
+                        if new_height == last_height:  # 더 이상 스크롤되지 않을 때 종료
+                            break
+                        last_height = new_height
+            
+                    driver.quit()
+            
+                    # 수집한 링크를 사용하여 각 기사 세부 정보를 가져오기
+                    count = 0
+                    file_index = 1
+                    for article_url in post_links:
+                        # 각 href를 사이트 링크에 추가하여 해당 페이지로 이ㄷㅇ
+                        page_url = f'https://brunch.co.kr{article_url}'
+                        print(page_url)
+                        article = get_article_details(page_url)  # 상세 페이지에서 정보 가져오기
+                        if article:
+                            article_list.append(article)
+                            count += 1
+            
+                        if count % max_articles == 0:  # 100개 단위로 저장
+                            if save_articles_to_csv(article_list, file_index, max_files):
+                                print(f"Reached the maximum of {max_files} files. Stopping.")
+                                break
+                            article_list = []  # 저장 후 리스트 초기화
+                            file_index += 1
+            
+                    if article_list and file_index <= max_files:  # 남아 있는 기사 저장
+                        save_articles_to_csv(article_list, file_index, max_files)
+            
+                    return article_list
+                except Exception as e:
+                    print(f"Error occurred: {e}")
+                    return None
+        ```
+    
+    </details>
+
+    
+    <details>
+        <summary> 크롤링한 정보를 가공 및 저장하는 함수</summary>
+    
+        ```
+           def get_article_details(url, wait_time=10):
+            try:
+                driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+                driver.implicitly_wait(wait_time)
+                driver.get(url)
+        
+                # 본격적인 크롤링 타임
+                html = driver.page_source
+                soup = BeautifulSoup(html, 'html.parser')
+                title = soup.select_one('h1.cover_title').text.strip()  # 제목 가져오기
+                contents = soup.select('.wrap_item.item_type_text')    # 콘텐츠 가져오기
+                tags = soup.select('.link_keyword')    # 태그 가져오기
+                divs = soup.select('.wrap_img_float')    # 이미지 감싸고 있는 태그 가져오기
+        
+                # 여러개의 태그로 나누어진 내용을 하나의 문자열로 합치기
+                content_text = ' '.join(content.text.strip() for content in contents)
+                tag_text = ','.join(tag.text.strip() for tag in tags)
+
+                # 이미지 wrap 태그에서 이미지로 접근, 첫번째 이미지 링크 가져오기
+                img_src = ''
+                if divs:
+                    for div in divs:
+                        img_tag = div.find('img')  # figure 태그 안에 있는 img 태그 찾기
+                        if img_tag and 'src' in img_tag.attrs:
+                            img_src = img_tag['src']
+                else:
+                    img_src = ''
+        
+                # 기사 내용 저장
+                article = {
+                    'title': title,
+                    'content': content_text,  # 하나의 문자열로 합친 내용 추가
+                    'tag': tag_text,
+                    'img': img_src,
+                    'url': url  # 상세 페이지의 URL 추가
+                }
+        
+                driver.quit()
+        
+                return article
+  
+            except Exception as e:
+                print(f"Error occurred: {e}")
+                return None
+        ```
+    
+    </details>
+    
+    <details>
+        <summary> 크롤링한 정보를 csv로 추출하는 코드 </summary>
+        
+            ```
+                def save_articles_to_csv(article_list, file_index, max_files=6):
+                    filename = f'brunch_plant_{file_index}.csv'
+                    new_df = pd.DataFrame(article_list)
+                
+                    if os.path.exists(filename):
+                        existing_df = pd.read_csv(filename, encoding='utf-8-sig', index_col=0)
+                        combined_df = pd.concat([existing_df, new_df]).drop_duplicates().reset_index(drop=True)
+                    else:
+                        combined_df = new_df
+                
+                    combined_df.to_csv(filename, index=True, encoding='utf-8-sig')
+                
+                    return file_index >= max_files
+            ```
+
+    </details>
+
+
+    <details>
+        <summary> 실제 함수의 사용 </summary>
+    
+        ```
+          if __name__ == '__main__':
+                    url = 'https://brunch.co.kr/keyword/%ED%99%94%EB%B6%84'
+                    get_articles_list(url)
+
+        ```
+    
+    </details>
+
+
+- 학습 데이터는 csv로 추출한데이터를 ai_post 테이블에 담아 사용
 - features : title, content, tags
 
     <details>
-    <summary>ai_post 데이터 프레임 생성 코드</summary>
+    <summary>ai_post 데이터 프레임 생성 함수</summary>
 
     ```
     def save_articles_from_csv(csv_file_path):
@@ -85,6 +242,7 @@
                     post = AiPost.objects.create(**post_data)
             # 모든 데이터가 성공적으로 저장되었음을 반환
             return True
+    
         except Exception as e:
             # 오류 발생 시 메시지 출력 및 False 반환
             print(f"Error occurred while saving articles from CSV: {e}")
@@ -101,10 +259,10 @@
         else:
             print("Failed to save articles.")
 
-
     ```
 
     </details>
+    
 <br>
 
 ---
@@ -292,15 +450,16 @@
 > ![image-5](https://github.com/DianaKang0123/selleaf/assets/156397873/864b0e9b-77f9-4659-b926-5b37aaeacff8)
 
 ### **6️⃣ 트러블 슈팅**
-- 문제점 1. 코사인 유사도 분석 후 값을 리턴할 때 for문을 사용하여 각 태그를 분리하는 과정에서 string 타입이 한글자씩 분리되는 문제
+- ▶️ 문제점 1. 코사인 유사도 분석 후 값을 리턴할 때 for문을 사용하여 각 태그를 분리하는 과정에서 string 타입이 한글자씩 분리되는 문제
 
-- 기존 반환되는 값의 유형 : ["['제주'", " '나무'", " '환경']"]
+    - 기존 반환되는 값의 유형 : ["['제주'", " '나무'", " '환경']"]
+- ❓ 추정 원인 : 사전 훈련 모델에 리스트로 태그가 삽입되어있어 이를 문자열로 인식하는 문제
 
-- 해결 : 리스트의 []와 '' 문자를 삭제하고 띄어쓰기 단위로 재분할하여 각 단어를 추출
-- 반환 되는 값의 유형 : ["제주", "나무", "환경"]
+- ❗해결 : 리스트의 []와 '' 문자를 삭제하고 띄어쓰기 단위로 재분할하여 각 단어를 추출
+    - 반환 되는 값의 유형 : ["제주", "나무", "환경"]
 
     <details>
-        <summary>코드</summary>
+        <summary>수정 코드</summary>
     
         ```
         joined_str = ''.join(tags)
@@ -310,9 +469,11 @@
         ```
     </details>
 
-- 문제점 2. 버튼을 클릭하여 서비스 활성화 시 결과물을 나타내기까지의 시간이 오래걸림
+- ▶️ 문제점 2. 버튼을 클릭하여 서비스 활성화 시 결과물을 나타내기까지의 시간이 오래걸림
 
-- 해결 : 로딩 처리를 하여 서버가 정상 작동하고 있음을 나타내고, 불필요한 함수를 삭제하여 속도를 개선시킴
+- ❓ 추정 원인 : 더미 데이터의 양이많고, 패치로 해당 내용을 불러오는 과정에 불필요한 함수로 인한 속도 저하
+
+- ❗ 해결 : 로딩 처리를 하여 서버가 정상 작동하고 있음을 나타내고, 불필요한 함수를 삭제하여 속도를 개선시킴
 
     <details>
             <summary>코드 처리 전</summary>
@@ -358,8 +519,9 @@
 
 - 문제점 3. 배포 서버에서 새로 추가된 서비스에 대한 css가 깨지고 js에서 오류가 발생하는 현상 발생
 
-- 해결 : collectstatic 명령어에서 파일들을 가져올 때 문제가 발생된것으로 파악되어, 해당 css, js 파일을 삭제한 후 다시 collectstatic 진행
-    - 제일 최근 수정된 파일을 반영하여 해결
+- ❓ 추정 원인 : 기존 css와 js를 열어서 확인 해본 결과 수정 사항이 반영되지 않음을 확인
+
+- ❗해결 : collectstatic 명령어에서 파일들을 가져올 때 문제가 발생된것으로 파악되어, 해당 css, js 파일을 삭제한 후 다시 collectstatic 진행
 
 
 ### **7️⃣ 기대 효과**
@@ -383,10 +545,10 @@
 - 태그를 통하여 데이터를 관리하고 분석하는데 도움을 주고, 여기서 파생되는 인사이트로 사이트의 질을 향상시킴
 
 
-### **8️⃣ 개선점**
-
-- 사전 훈련 데이터의 양이 부족하여 코사인 유사도가 대체적으로 낮게 나오는 경향이 있음
-    - 이는 작성되는 게시글이 늘어날 수록 데이터가 쌓이고, 이로 인해 개선 될 수 있다고 판단됨
-- 서비스가 복잡해지면서 코드도 덩달아 복잡해지고, 데이터가 많아져 서버의 속도가 느려지는 것을 확인
-    - 이는 코드를 단순화하고 이미지 최적화등으로 개선해 나가야 할 것으로 판단됨
+### **8️⃣ 느낀점**
+- 웹개발과 데이터 분석이라는 두가지를 결합하여 AI 기반 추천 시스템을 적용하면서, 이론이 어떻게 실무에 적용되는 지에 대해서 파악 할 수 있었고,
+  수치 상으로만 확인 하던 결과를 실제로 서비스에 적용할 수 있어서 이해에 도움이 되었습니다.
+- 서비스를 개발하면서 사전 훈련 데이터의 양이 부족하여 코사인 유사도가 대체적으로 낮게 나오는 경향을 보였는데, 이로 인해서 사전 훈련 모델만을 신뢰 할 수 없다는 생각을 하였고
+  정확한 데이터 분석을 위해서는 많은 양과, 높은 퀄리티의 정보가 중요함을 알게되었습니다.
+  이러한 깨달음으로 차후 사이트 내 게시물 데이터를 늘려 정확도를 개선해야겠다는 생각을 하였습니다.
  
