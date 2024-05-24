@@ -54,6 +54,7 @@
 
 - 크롤링을 통하여 홈페이지 성격에 맞는 식물에 관련 된 글의 제목, 내용, 태그를 크롤링하여 사용
 - 학습 데이터는 csv로 추출하여 ai_post 테이블에 정보를 담아 사용
+- features : title, content, tags
 
     <details>
     <summary>ai_post 데이터 프레임 생성 코드</summary>
